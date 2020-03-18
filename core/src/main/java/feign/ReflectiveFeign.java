@@ -46,8 +46,11 @@ public class ReflectiveFeign extends Feign {
   @SuppressWarnings("unchecked")
   @Override
   public <T> T newInstance(Target<T> target) {
+    // 解析方法调用参数生成MethodHandler
     Map<String, MethodHandler> nameToHandler = targetToHandlersByName.apply(target);
+    // 持有Method和MethodHandler方便调用
     Map<Method, MethodHandler> methodToHandler = new LinkedHashMap<Method, MethodHandler>();
+    // Object的默认方法 equals()
     List<DefaultMethodHandler> defaultMethodHandlers = new LinkedList<DefaultMethodHandler>();
 
     for (Method method : target.type().getMethods()) {
@@ -61,7 +64,9 @@ public class ReflectiveFeign extends Feign {
         methodToHandler.put(method, nameToHandler.get(Feign.configKey(target.type(), method)));
       }
     }
+    // 创建jdk代理handler 默认实现是FeignInvocationHandler
     InvocationHandler handler = factory.create(target, methodToHandler);
+    // 生成代理
     T proxy = (T) Proxy.newProxyInstance(target.type().getClassLoader(),
         new Class<?>[] {target.type()}, handler);
 
@@ -96,7 +101,7 @@ public class ReflectiveFeign extends Feign {
       } else if ("toString".equals(method.getName())) {
         return toString();
       }
-
+      // 通过dispatch分派给对应的MethodHandler执行
       return dispatch.get(method).invoke(args);
     }
 
